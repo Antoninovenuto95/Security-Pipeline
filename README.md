@@ -155,8 +155,6 @@ Tutte le variabili necessarie all’applicazione sono definite nel docker-compos
 services.app.environment:
 ```
 
-Quindi **non serve nessun `.env`**.
-
 ---
 
 # Sicurezza
