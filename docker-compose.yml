@@ -1,0 +1,91 @@
+version: "3.8"
+
+# File docker-compose per avviare MongoDB, SFTP, Samba e l'app Python
+services:
+  mongo:
+    # Immagine ufficiale MongoDB versione 7
+    image: mongo:7
+    container_name: mongo-secure-pipeline
+    restart: unless-stopped  # Riavvio automatico a meno che non venga fermato manualmente
+    ports:
+      - "27017:27017"       # Esposizione porta MongoDB (host:container)
+    volumes:
+      - mongo_data:/data/db  # Persistenza dei dati Mongo nel volume nominato
+
+  sftp:
+    # Contenitore SFTP basato su atmoz/sftp
+    image: atmoz/sftp
+    container_name: sftp-secure-pipeline
+    restart: unless-stopped
+    ports:
+      - "2222:22"            # Porta SFTP esposta all'host
+    volumes:
+      - ./sftp-data:/home/sftpuser  # Cartella locale montata come home dell'utente SFTP
+    # Formato comando: "utente:password:uid:gid:directory"
+    command: "sftpuser:sftppass:1001:1001:upload"  # Utente sftpuser con directory remota "upload"
+
+  samba:
+    # Contenitore Samba per condivisione file in stile Windows/SMB
+    image: dockurr/samba
+    container_name: samba-secure-pipeline
+    restart: unless-stopped
+    environment:
+      USER: "samba"         # Utente Samba
+      PASS: "sambapass"     # Password Samba
+    ports:
+      - "1445:445"          # Porta SMB esposta (445 -> 1445 host)
+    volumes:
+      - ./samba-data:/storage  # Cartella locale montata come storage della share
+
+  app:
+    # Applicazione Python secure-pipeline
+    build: .
+    container_name: secure-pipeline-app
+    depends_on:
+      - mongo
+      - sftp
+      - samba
+    # Tutta la configurazione viene passata direttamente come env
+    environment:
+      # ===== MongoDB =====
+      MONGO_URI: mongodb://mongo-secure-pipeline:27017
+      MONGO_DB: secure_pipeline
+      MONGO_COLLECTION: files
+
+      # ===== Samba (SMB) =====
+      SMB_SERVER: //samba-secure-pipeline/Data
+      SMB_USERNAME: samba
+      SMB_PASSWORD: sambapass
+      SMB_PATH_PREFIX: /incoming
+      SMB_PORT: "445"
+      SMB_DOMAIN: ""
+
+      # ===== SFTP =====
+      SFTP_HOST: sftp-secure-pipeline
+      SFTP_PORT: "22"
+      SFTP_USERNAME: sftpuser
+      SFTP_PASSWORD: sftppass
+      SFTP_REMOTE_DIR: upload
+
+      # ===== Info app =====
+      DEVICE_ID: docker-app
+      CHUNK_SIZE: "1048576"
+
+      # ===== Wrapping chiave AES con RSA (opzionale) =====
+      WRAP_AES_KEY_WITH_RSA: "false"
+      # Per il wrapping, decommentare/impostare:
+      # RSA_PUBLIC_KEY_PEM: "-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+      # RSA_PRIVATE_KEY_PEM: "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
+
+    # Monta la cartella del progetto come /data per i file da cifrare
+    volumes:
+      - ./:/data
+    working_dir: /app
+    # Si passa encrypt/decrypt a run/exec
+    # Esempi:
+    #   docker-compose run --rm app encrypt /data/test.txt
+    #   docker-compose run --rm app decrypt <mongodb_id>
+    # command: ["encrypt", "/data/test.txt"]
+
+volumes:
+  mongo_data:  # Volume nominato per la persistenza dei dati MongoDB
