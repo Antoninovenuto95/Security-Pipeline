@@ -163,6 +163,5 @@ services.app.environment:
 - **SHA‑256 su plaintext e ciphertext** → doppia verifica integrità  
 - **RSA‑OAEP SHA‑256 (opzionale)** → wrapping sicuro della chiave AES  
 - **File temporanei eliminati automaticamente**  
-- **Nessun venv necessario** → ambiente sempre pulito e riproducibile mediante Docker  
 
 
