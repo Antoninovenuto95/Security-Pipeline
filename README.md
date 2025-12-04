@@ -1,6 +1,6 @@
-# Secure Pipeline – File Encryption, Integrity & Secure Transfer
+# File Encryption, Integrity & Secure Transfer
 
-Secure-Pipeline è un sistema completamente containerizzato che fornisce:
+Il sistema è completamente containerizzato e fornisce:
 
 1. **Cifratura dei file** tramite AES‑256‑GCM  
 2. **Storage sicuro dei ciphertext** su una share SMB  
